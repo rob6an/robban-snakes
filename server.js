@@ -8,6 +8,8 @@
  *   PORT         port to listen on (hosts like Render set this automatically)
  *   MIN_SNAKES   bots fill the arena up to this many snakes (default 12)
  *   MAX_PLAYERS  max human players at once (default 100)
+ *   SPEED        snake speed, px per tick (default 11)
+ *   BOOST_SPEED  boost speed (default 2 × SPEED)
  */
 const http = require('http');
 const fs = require('fs');
@@ -24,8 +26,8 @@ const BASE_FOOD = 900;         // food kept on the map
 const FOOD_CAP = 5000;         // hard cap (incl. dropped food)
 const START_MASS = 30;
 const MIN_BOOST_MASS = 20;
-const SPEED = 7.5;             // px per tick
-const BOOST_SPEED = 15;
+const SPEED = Number(process.env.SPEED ?? 11);                     // px per tick (normal)
+const BOOST_SPEED = Number(process.env.BOOST_SPEED ?? SPEED * 2); // px per tick (boosting)
 const CELL = 128;              // spatial grid cell size
 const COLORS = 12;
 
@@ -37,7 +39,7 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const radiusOf = m => Math.min(9 + Math.sqrt(m) * 0.9, 42);
 const segCountOf = m => Math.min(Math.floor(8 + m / 3), 700);
 const viewOf = m => Math.min(620 + m * 0.35, 1700);
-const turnOf = m => Math.max(0.08, 0.22 - m / 6000);
+const turnOf = m => Math.max(0.1, 0.28 - m / 6000);
 
 let tick = 0;
 let lastId = 0;
@@ -194,7 +196,7 @@ function botThink(s) {
   if (s.dodge > 0) { s.dodge--; return; }
 
   // look ahead for other snakes
-  const look = 50 + r * 2.5;
+  const look = 50 + SPEED * 3 + r * 2.5;
   for (const off of [0, 0.45, -0.45]) {
     const a = s.angle + off;
     if (hitTest(h.x + Math.cos(a) * look, h.y + Math.sin(a) * look, r + 6, s)) {
