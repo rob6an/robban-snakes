@@ -32,9 +32,14 @@
   #nick { width:100%; padding:14px 16px; font:700 17px Inter,sans-serif; color:#fff; text-align:center;
     background:rgba(255,255,255,.06); border:1px solid var(--line); border-radius:12px; outline:none; user-select:text; -webkit-user-select:text; }
   #nick:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(47,123,255,.25); }
-  #swatches { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin:14px 0 16px; }
-  .sw { aspect-ratio:1; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; }
-  .sw.on { border-color:#fff; box-shadow:0 0 0 3px rgba(255,255,255,.15), 0 0 14px rgba(255,255,255,.3); }
+  #swatches { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin:14px 0 6px; }
+  #skinName { margin:0 0 14px; font:700 13px Inter,sans-serif; color:#f3c08a; letter-spacing:.5px; }
+  .sw { position:relative; aspect-ratio:1; border-radius:12px; border:2px solid rgba(255,255,255,.08); cursor:pointer; padding:5px 5px 9px;
+    background:rgba(255,255,255,.05); display:grid; place-items:center; overflow:hidden; transition:transform .1s, background .15s; }
+  .sw svg { width:100%; height:100%; display:block; }
+  .sw .bar { position:absolute; left:0; right:0; bottom:0; height:5px; }
+  .sw:hover { background:rgba(255,255,255,.1); transform:translateY(-1px); }
+  .sw.on { border-color:#f3c08a; background:rgba(243,192,138,.14); box-shadow:0 0 14px rgba(243,192,138,.35); }
   #play { width:100%; padding:15px; border:0; border-radius:12px; cursor:pointer; font:800 19px Inter,sans-serif; letter-spacing:2px; color:#fff;
     background:linear-gradient(90deg,var(--blue),var(--red)); box-shadow:0 8px 24px rgba(255,45,85,.25); transition:transform .1s, filter .15s; }
   #play:hover { filter:brightness(1.12); } #play:active { transform:scale(.98); }
@@ -123,11 +128,36 @@
   const SERVER = params.get('server') || window.GAME_SERVER ||
     ((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
 
-  const PALETTE = [ // [body, stripe]
-    ['#2f7bff', '#9cc0ff'], ['#ff2d55', '#ffa6b8'], ['#22d3a6', '#b3f5e2'], ['#ffcc00', '#fff1a6'],
-    ['#a855f7', '#e0c2ff'], ['#ff7a1a', '#ffd0a8'], ['#00d0ff', '#b0f3ff'], ['#f43fbd', '#ffbdea'],
-    ['#7ee81f', '#d9ffa8'], ['#e9edf7', '#8b95b0'], ['#ff2d55', '#2f7bff'], ['#141a2e', '#ff2d55'],
+  // Moroccan skins: [body colour, stripe colour, name, icon]
+  const PALETTE = [
+    ['#c1272d', '#006233', 'Maghribi Flag',
+     '<rect x="4" y="10" width="40" height="28" rx="3" fill="#c1272d"/><path d="M24 14 L29.9 32.1 L14.5 20.9 L33.5 20.9 L18.1 32.1 Z" fill="none" stroke="#006233" stroke-width="2.4" stroke-linejoin="round"/>'],
+    ['#c4532d', '#f3c08a', 'Tajine',
+     '<ellipse cx="24" cy="39" rx="20" ry="4.5" fill="#8b3a1a"/><path d="M8 37 Q24 2 40 37 Z" fill="#c4532d"/><path d="M13 31 Q24 27 35 31 M16.5 24 Q24 21 31.5 24" stroke="#f3c08a" stroke-width="1.8" fill="none"/><circle cx="24" cy="10" r="3.2" fill="#e0a85c"/>'],
+    ['#b9bec8', '#5fb86b', 'Berrad d Atay',
+     '<path d="M33 30 Q42 28 44 16" stroke="#b9bec8" stroke-width="3.2" fill="none" stroke-linecap="round"/><path d="M14 23 Q4 28 14 36" stroke="#9aa0aa" stroke-width="3" fill="none"/><ellipse cx="24" cy="31" rx="11" ry="9" fill="#c9ccd3"/><path d="M17 31 a7 5 0 0 0 14 0" fill="none" stroke="#9aa0aa" stroke-width="1.5"/><path d="M16 22 L24 10 L32 22 Z" fill="#d9dce2"/><circle cx="24" cy="9" r="2.4" fill="#9aa0aa"/><ellipse cx="24" cy="40" rx="9" ry="2.2" fill="#9aa0aa"/>'],
+    ['#b5651d', '#d4a017', 'Kas d Atay',
+     '<path d="M16 22 L32 22 L30 42 L18 42 Z" fill="#b5651d"/><path d="M14 12 L34 12 L30.5 42 L17.5 42 Z" fill="rgba(255,255,255,.18)" stroke="#e8ecf5" stroke-width="1.6"/><rect x="16.8" y="31" width="14.4" height="3.5" fill="#d4a017"/><ellipse cx="20" cy="11" rx="6" ry="3" fill="#3fa34d" transform="rotate(-30 20 11)"/><ellipse cx="28" cy="10" rx="6" ry="3" fill="#5fb86b" transform="rotate(25 28 10)"/>'],
+    ['#f5c518', '#9c5f2c', 'Babouche',
+     '<path d="M5 33 Q5 23 17 22 L29 22 Q44 23 45 32 Q45 37 38 37 L11 37 Q5 37 5 33 Z" fill="#f5c518"/><ellipse cx="17" cy="25.5" rx="8.5" ry="3" fill="#8b5a1a"/><path d="M6 36 L44 36" stroke="#9c5f2c" stroke-width="2.4" stroke-linecap="round"/>'],
+    ['#b3121f', '#141414', 'Tarbouch',
+     '<path d="M13 39 L17 13 L31 13 L35 39 Z" fill="#b3121f"/><ellipse cx="24" cy="13" rx="7" ry="2.2" fill="#d11a2a"/><ellipse cx="24" cy="39" rx="11" ry="2.8" fill="#8e0e18"/><path d="M24 13 Q33 15 34 27" stroke="#141414" stroke-width="2" fill="none"/><path d="M31.5 26 L36.5 26 L35.5 34 L32.5 34 Z" fill="#141414"/>'],
+    ['#1e1b4b', '#d4a017', 'Fanous',
+     '<circle cx="24" cy="6" r="3" fill="none" stroke="#d4a017" stroke-width="2"/><path d="M17 18 L24 9 L31 18 Z" fill="#d4a017"/><path d="M15 18 L33 18 L36 30 L24 43 L12 30 Z" fill="#1e1b4b" stroke="#d4a017" stroke-width="2"/><circle cx="24" cy="28" r="6" fill="#ffcc55" opacity=".9"/><path d="M24 18 L24 43 M15 18 L24 30 L33 18" stroke="#d4a017" stroke-width="1.2" fill="none"/>'],
+    ['#e0a85c', '#9c5f2c', 'Sahara',
+     '<circle cx="33" cy="14" r="7" fill="#f4a300"/><path d="M2 38 Q14 22 28 34 T46 30 L46 44 L2 44 Z" fill="#e0a85c"/><path d="M2 44 Q20 32 46 40 L46 44 Z" fill="#b97a3c"/>'],
+    ['#0f7a5a', '#f2efe6', 'Zellige',
+     '<rect x="11" y="11" width="26" height="26" fill="#0f7a5a"/><rect x="11" y="11" width="26" height="26" fill="#0f7a5a" transform="rotate(45 24 24)"/><rect x="16" y="16" width="16" height="16" fill="#f2efe6"/><rect x="16" y="16" width="16" height="16" fill="#f2efe6" transform="rotate(45 24 24)"/><circle cx="24" cy="24" r="5" fill="#2b4fd6"/>'],
+    ['#2f6fd0', '#eef5ff', 'Chefchaouen',
+     '<rect x="4" y="4" width="40" height="40" rx="6" fill="#dbe9fb"/><path d="M14 44 L14 22 Q14 10 24 10 Q34 10 34 22 L34 44 Z" fill="#2f6fd0" stroke="#8fc0ff" stroke-width="2"/><path d="M24 12 L24 44" stroke="#1d4f9e" stroke-width="1.5"/><circle cx="29" cy="30" r="1.8" fill="#f5c518"/>'],
+    ['#2e8b3e', '#7a4a22', 'Nkhla',
+     '<path d="M22.5 44 L23.4 19 L24.6 19 L25.5 44 Z" fill="#7a4a22"/><path d="M24 19 Q14 13 5 22 M24 19 Q34 13 43 22 M24 19 Q16 7 9 10 M24 19 Q32 7 39 10 M24 19 Q24 9 24 5" stroke="#2e8b3e" stroke-width="3.2" fill="none" stroke-linecap="round"/><circle cx="21" cy="23" r="2" fill="#e07b1a"/><circle cx="27" cy="23" r="2" fill="#e07b1a"/><circle cx="24" cy="25" r="2" fill="#c4532d"/>'],
+    ['#5b6573', '#f4f6fa', 'Atlas',
+     '<path d="M2 42 L16 17 L24 30 L32 12 L46 42 Z" fill="#5b6573"/><path d="M12.6 23 L16 17 L19.4 23 L16.5 21.5 Z M28 21 L32 12 L36 21 L32.5 19 Z" fill="#f4f6fa"/>'],
   ];
+  const FOOD_COLORS = ['#ff4d5e', '#2fbf71', '#ffcc33', '#4da3ff', '#ff8a3d', '#b77dff', '#3ee0d0', '#ff6fb5', '#9be564', '#ffffff', '#f3c08a', '#5bc0ff'];
+  const svgOf = icon => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">${icon}</svg>`;
+  const ICON_IMG = PALETTE.map(p => { const im = new Image(); im.src = 'data:image/svg+xml;base64,' + btoa(svgOf(p[3])); return im; });
   const radiusOf = m => Math.min(9 + Math.sqrt(m) * 0.9, 42);
 
   // ---------- DOM ----------
@@ -148,14 +178,19 @@
   } catch { color = Math.floor(Math.random() * PALETTE.length); }
 
   const sw = $('swatches');
-  PALETTE.forEach(([a, b], i) => {
+  const skinName = document.createElement('div');
+  skinName.id = 'skinName';
+  PALETTE.forEach(([a, b, nm, icon], i) => {
     const el = document.createElement('button');
     el.className = 'sw' + (i === color ? ' on' : '');
-    el.style.background = `repeating-linear-gradient(135deg, ${a} 0 7px, ${b} 7px 11px)`;
-    el.title = 'Color ' + (i + 1);
-    el.onclick = () => { color = i; [...sw.children].forEach((c, j) => c.classList.toggle('on', j === i)); };
+    el.innerHTML = svgOf(icon) + `<span class="bar" style="background:repeating-linear-gradient(135deg, ${a} 0 6px, ${b} 6px 10px)"></span>`;
+    el.title = nm;
+    el.setAttribute('aria-label', nm);
+    el.onclick = () => { color = i; [...sw.children].forEach((c, j) => c.classList.toggle('on', j === i)); skinName.textContent = nm; };
     sw.appendChild(el);
   });
+  skinName.textContent = PALETTE[color][2];
+  sw.after(skinName);
 
   // ---------- state ----------
   let W = 0, H = 0, DPR = 1;
@@ -406,10 +441,10 @@
     }
     ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = r * 2 + 4; ctx.stroke();
     ctx.strokeStyle = c0; ctx.lineWidth = r * 2; ctx.stroke();
-    ctx.setLineDash([r * 0.75, r * 1.05]);
-    ctx.strokeStyle = c1; ctx.globalAlpha = 0.55; ctx.lineWidth = r * 1.55; ctx.stroke();
+    ctx.setLineDash([r * 0.7, r * 1.3]);
+    ctx.strokeStyle = c1; ctx.globalAlpha = 0.92; ctx.lineWidth = r * 1.5; ctx.stroke();
     ctx.setLineDash([]);
-    ctx.globalAlpha = 0.18; ctx.strokeStyle = '#fff'; ctx.lineWidth = r * 0.5; ctx.stroke(); // sheen
+    ctx.globalAlpha = 0.12; ctx.strokeStyle = '#fff'; ctx.lineWidth = r * 0.45; ctx.stroke(); // sheen
     ctx.globalAlpha = 1;
 
     // head
@@ -434,6 +469,8 @@
       ctx.strokeText(name, hx, ty);
       ctx.fillStyle = s.id === myId ? '#fff' : 'rgba(230,236,255,.85)';
       ctx.fillText(name, hx, ty);
+      const ic = ICON_IMG[s.color % ICON_IMG.length], isz = 17 / scale;
+      if (ic.complete && ic.naturalWidth) ctx.drawImage(ic, hx - ctx.measureText(name).width / 2 - isz - 3 / scale, ty - isz * 0.8, isz, isz);
     }
   }
 
@@ -487,7 +524,7 @@
     for (const f of foods) {
       if (f.x < x0 - 30 || f.x > x1 + 30 || f.y < y0 - 30 || f.y > y1 + 30) continue;
       const rr = (3 + f.v * 1.3) * (1 + 0.18 * Math.sin(now / 280 + f.ph));
-      ctx.fillStyle = PALETTE[f.c % PALETTE.length][0];
+      ctx.fillStyle = FOOD_COLORS[f.c % FOOD_COLORS.length];
       ctx.globalAlpha = 0.22; circle(f.x, f.y, rr * 2.3);
       ctx.globalAlpha = 1; circle(f.x, f.y, rr);
     }
