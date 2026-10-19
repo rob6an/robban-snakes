@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ROBBAN.IO — Snake Arena</title>
+<meta name="description" content="Multiplayer snake arena — play live with RobbaN and the Kick chat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Inter:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --blue:#2f7bff; --red:#ff2d55; --bg:#070a14; --panel:rgba(10,14,28,.82); --line:rgba(120,150,255,.18); }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; overflow:hidden; background:var(--bg); color:#fff;
+    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; touch-action:none; user-select:none; -webkit-user-select:none; }
+  canvas { display:block; }
+  a { color:#7fb0ff; }
+
+  /* ---------- menu ---------- */
+  #menu { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:16px;
+    background:radial-gradient(ellipse at center, rgba(7,10,20,.35), rgba(7,10,20,.85)); z-index:10; }
+  #menu.hidden { display:none; }
+  .card { width:min(420px,100%); background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:26px 24px 20px;
+    text-align:center; backdrop-filter:blur(10px); box-shadow:0 20px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(255,45,85,.08); }
+  .logo { font-family:'Russo One',Inter,sans-serif; font-size:44px; letter-spacing:1px; line-height:1;
+    background:linear-gradient(90deg,var(--blue),#8fb6ff 45%,var(--red)); -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 18px rgba(47,123,255,.35)); }
+  .logo span { color:var(--red); -webkit-text-fill-color:var(--red); }
+  .sub { margin:8px 0 18px; font-size:13px; color:#a9b4d6; }
+  #nick { width:100%; padding:14px 16px; font:700 17px Inter,sans-serif; color:#fff; text-align:center;
+    background:rgba(255,255,255,.06); border:1px solid var(--line); border-radius:12px; outline:none; user-select:text; -webkit-user-select:text; }
+  #nick:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(47,123,255,.25); }
+  #swatches { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin:14px 0 16px; }
+  .sw { aspect-ratio:1; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; }
+  .sw.on { border-color:#fff; box-shadow:0 0 0 3px rgba(255,255,255,.15), 0 0 14px rgba(255,255,255,.3); }
+  #play { width:100%; padding:15px; border:0; border-radius:12px; cursor:pointer; font:800 19px Inter,sans-serif; letter-spacing:2px; color:#fff;
+    background:linear-gradient(90deg,var(--blue),var(--red)); box-shadow:0 8px 24px rgba(255,45,85,.25); transition:transform .1s, filter .15s; }
+  #play:hover { filter:brightness(1.12); } #play:active { transform:scale(.98); }
+  #play:disabled { filter:grayscale(.8) brightness(.7); cursor:default; }
+  #status { min-height:18px; margin-top:10px; font-size:13px; color:#ffb3c2; }
+  .help { margin-top:6px; font-size:12px; color:#8590b3; line-height:1.6; }
+  .online { margin-top:12px; font-size:12px; color:#a9b4d6; display:flex; gap:6px; align-items:center; justify-content:center; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#22d36a; box-shadow:0 0 8px #22d36a; }
+  #deathBox { margin-bottom:16px; }
+  .dead-title { font:800 22px Inter,sans-serif; color:var(--red); margin-bottom:10px; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .stats div { background:rgba(255,255,255,.05); border-radius:10px; padding:10px 4px; }
+  .stats b { display:block; font-size:22px; } .stats span { font-size:11px; color:#8590b3; text-transform:uppercase; letter-spacing:1px; }
+  #dBy { margin-top:10px; font-size:13px; color:#a9b4d6; }
+
+  /* ---------- HUD ---------- */
+  .hud { position:fixed; pointer-events:none; z-index:5; text-shadow:0 1px 3px rgba(0,0,0,.8); }
+  #lb { top:12px; right:12px; width:210px; background:rgba(8,12,24,.55); border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:13px; }
+  #lb h3 { margin:0 0 6px; font:800 12px Inter,sans-serif; letter-spacing:2px; color:#8fb6ff; }
+  #lb ol { margin:0; padding:0; list-style:none; }
+  #lb li { display:flex; gap:6px; padding:2px 0; color:#d6ddf5; }
+  #lb li .n { flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  #lb li.me { color:#fff; font-weight:800; } #lb li.me .n { color:var(--red); }
+  #lb li .r { width:18px; color:#7b86a8; }
+  #lb .bot { opacity:.55; }
+  #lbFoot { margin-top:6px; font-size:11px; color:#7b86a8; }
+  #score { left:14px; bottom:14px; font-size:15px; color:#cfd7f3; }
+  #score b { font-size:24px; color:#fff; }
+  #feed { top:12px; left:12px; font-size:13px; max-width:46vw; }
+  #feed div { background:rgba(8,12,24,.55); padding:4px 10px; border-radius:8px; margin-bottom:4px; transition:opacity .6s; }
+  #feed .k { color:#ff8aa3; font-weight:700; } #feed .v { color:#9ec0ff; font-weight:700; }
+  #mini { right:12px; bottom:12px; width:150px; height:150px; border-radius:50%; }
+  #boostBtn { position:fixed; left:18px; bottom:70px; width:78px; height:78px; border-radius:50%; display:none; z-index:6;
+    align-items:center; justify-content:center; font-size:32px; background:rgba(255,45,85,.25); border:2px solid rgba(255,45,85,.7); color:#fff; }
+  #boostBtn.on { background:rgba(255,45,85,.6); }
+  @media (pointer:coarse) { body.playing #boostBtn { display:flex; } #lb { width:160px; font-size:12px; } #mini { width:110px; height:110px; } }
+  body:not(.playing) #score, body:not(.playing) #mini { display:none; }
+
+  /* ---------- OBS / stream spectator mode (?obs=1) ---------- */
+  #obsBanner { display:none; left:50%; bottom:18px; transform:translateX(-50%); padding:10px 22px; border-radius:999px;
+    font:800 20px Inter,sans-serif; background:linear-gradient(90deg,rgba(47,123,255,.9),rgba(255,45,85,.9)); box-shadow:0 8px 30px rgba(0,0,0,.4); white-space:nowrap; }
+  body.obs #obsBanner { display:block; }
+  body.obs #menu, body.obs #score, body.obs #mini, body.obs #boostBtn { display:none !important; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="menu">
+  <div class="card">
+    <div class="logo">ROBBAN<span>.IO</span></div>
+    <div class="sub">Snake Arena · play live with <a href="https://kick.com/robbangg" target="_blank" rel="noopener">RobbaN on Kick</a></div>
+    <div id="deathBox" hidden>
+      <div class="dead-title">You got eaten!</div>
+      <div class="stats">
+        <div><b id="dScore">0</b><span>length</span></div>
+        <div><b id="dKills">0</b><span>kills</span></div>
+        <div><b id="dTime">0s</b><span>survived</span></div>
+      </div>
+      <div id="dBy"></div>
+    </div>
+    <input id="nick" maxlength="16" placeholder="Your Kick username" autocomplete="off" spellcheck="false">
+    <div id="swatches"></div>
+    <button id="play" disabled>PLAY</button>
+    <div id="status">Connecting…</div>
+    <div class="help">Mouse to steer · hold click or Space to boost<br>Phone: drag to steer · hold ⚡ to boost</div>
+    <div class="online"><span class="dot"></span><span id="onlineCount">0</span>&nbsp;online · <span id="playingCount">0</span>&nbsp;playing</div>
+  </div>
+</div>
+
+<div id="lb" class="hud"><h3>LEADERBOARD</h3><ol id="lbList"></ol><div id="lbFoot"></div></div>
+<div id="feed" class="hud"></div>
+<div id="score" class="hud">Length <b id="len">0</b> &nbsp;·&nbsp; Rank <b id="rank">-</b></div>
+<canvas id="mini" class="hud" width="300" height="300"></canvas>
+<div id="obsBanner" class="hud"></div>
+<div id="boostBtn">⚡</div>
+
+<script>
+(() => {
+  'use strict';
+  // ---------- config ----------
+  const params = new URLSearchParams(location.search);
+  const OBS = params.has('obs');
+  // If this page is hosted somewhere other than the game server, set ?server=wss://your-server
+  const SERVER = params.get('server') || window.GAME_SERVER ||
+    ((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
+
+  const PALETTE = [ // [body, stripe]
+    ['#2f7bff', '#9cc0ff'], ['#ff2d55', '#ffa6b8'], ['#22d3a6', '#b3f5e2'], ['#ffcc00', '#fff1a6'],
+    ['#a855f7', '#e0c2ff'], ['#ff7a1a', '#ffd0a8'], ['#00d0ff', '#b0f3ff'], ['#f43fbd', '#ffbdea'],
+    ['#7ee81f', '#d9ffa8'], ['#e9edf7', '#8b95b0'], ['#ff2d55', '#2f7bff'], ['#141a2e', '#ff2d55'],
+  ];
+  const radiusOf = m => Math.min(9 + Math.sqrt(m) * 0.9, 42);
+
+  // ---------- DOM ----------
+  const $ = id => document.getElementById(id);
+  const cv = $('game'), ctx = cv.getContext('2d');
+  const mini = $('mini'), mctx = mini.getContext('2d');
+  const menu = $('menu'), nick = $('nick'), playBtn = $('play'), statusEl = $('status');
+  if (OBS) {
+    document.body.classList.add('obs');
+    $('obsBanner').textContent = params.get('join') || 'Join the game → robbangg.com';
+  }
+
+  let color = 0;
+  try {
+    nick.value = params.get('name') || localStorage.getItem('rb_nick') || '';
+    const c = parseInt(localStorage.getItem('rb_color'), 10);
+    color = Number.isInteger(c) && c >= 0 && c < PALETTE.length ? c : Math.floor(Math.random() * PALETTE.length);
+  } catch { color = Math.floor(Math.random() * PALETTE.length); }
+
+  const sw = $('swatches');
+  PALETTE.forEach(([a, b], i) => {
+    const el = document.createElement('button');
+    el.className = 'sw' + (i === color ? ' on' : '');
+    el.style.background = `repeating-linear-gradient(135deg, ${a} 0 7px, ${b} 7px 11px)`;
+    el.title = 'Color ' + (i + 1);
+    el.onclick = () => { color = i; [...sw.children].forEach((c, j) => c.classList.toggle('on', j === i)); };
+    sw.appendChild(el);
+  });
+
+  // ---------- state ----------
+  let W = 0, H = 0, DPR = 1;
+  let ws = null, connected = false, worldR = 3000;
+  let myId = 0, playing = false, joinPending = false;
+  const names = new Map();
+  let prev = null, curr = null, interval = 50;
+  let foods = [];
+  const cam = { x: 0, y: 0, init: false };
+  let scale = 1;
+  let lb = null;
+  let mouseA = 0, boostMouse = false, boostKey = false, boostTouch = false, boostBtnOn = false;
+  let lastA = null, lastB = null;
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    sendAspect();
+  }
+  addEventListener('resize', resize);
+
+  function send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+  function sendAspect() { send({ t: 'v', a: +(W / Math.max(1, H)).toFixed(3) }); }
+
+  // ---------- networking ----------
+  let slowTimer = null;
+  function connect() {
+    statusEl.textContent = 'Connecting…';
+    clearTimeout(slowTimer);
+    slowTimer = setTimeout(() => { if (!connected) statusEl.textContent = 'Waking the server up… (can take ~30s)'; }, 3500);
+    try { ws = new WebSocket(SERVER); } catch { return setTimeout(connect, 2000); }
+    ws.binaryType = 'arraybuffer';
+    ws.onopen = () => {
+      connected = true; clearTimeout(slowTimer);
+      statusEl.textContent = ''; playBtn.disabled = false;
+      sendAspect();
+    };
+    ws.onclose = () => {
+      connected = false; playing = false; myId = 0; joinPending = false;
+      document.body.classList.remove('playing');
+      playBtn.disabled = true;
+      showMenu();
+      statusEl.textContent = 'Disconnected — reconnecting…';
+      setTimeout(connect, 2000);
+    };
+    ws.onmessage = e => {
+      if (typeof e.data === 'string') { try { onJSON(JSON.parse(e.data)); } catch {} }
+      else onBinary(e.data);
+    };
+  }
+
+  function onJSON(m) {
+    switch (m.t) {
+      case 'w': worldR = m.world; break;
+      case 'N': for (const [id, n] of m.list) names.set(id, n); break;
+      case 'n': names.set(m.id, m.n); break;
+      case 's':
+        myId = m.id; playing = true; joinPending = false; lastA = null;
+        document.body.classList.add('playing');
+        menu.classList.add('hidden');
+        break;
+      case 'd': onDeath(m); break;
+      case 'l': lb = m; renderLeaderboard(); break;
+      case 'k': addFeed(m); break;
+      case 'full': joinPending = false; statusEl.textContent = 'Arena is full — try again in a moment!'; break;
+    }
+  }
+
+  function onBinary(buf) {
+    const dv = new DataView(buf);
+    const type = dv.getUint8(0);
+    if (type === 1) {
+      let o = 1;
+      const me = dv.getUint16(o, true); o += 2;
+      const cx = dv.getInt16(o, true); o += 2;
+      const cy = dv.getInt16(o, true); o += 2;
+      const view = dv.getUint16(o, true); o += 2;
+      const n = dv.getUint16(o, true); o += 2;
+      const map = new Map();
+      for (let i = 0; i < n; i++) {
+        const id = dv.getUint16(o, true), col = dv.getUint8(o + 2), flags = dv.getUint8(o + 3);
+        const mass = dv.getUint16(o + 4, true), np = dv.getUint16(o + 6, true);
+        let x = dv.getInt16(o + 8, true), y = dv.getInt16(o + 10, true);
+        o += 12;
+        const pts = new Float32Array(np * 2);
+        pts[0] = x; pts[1] = y;
+        for (let k = 1; k < np; k++) {
+          x += dv.getInt8(o++); y += dv.getInt8(o++);
+          pts[k * 2] = x; pts[k * 2 + 1] = y;
+        }
+        map.set(id, { id, color: col, boost: flags & 1, mass, pts });
+      }
+      const now = performance.now();
+      if (curr) { const dt = now - curr.t; if (dt > 5 && dt < 300) interval = interval * 0.85 + dt * 0.15; }
+      prev = curr;
+      curr = { t: now, me, cx, cy, view, snakes: map };
+      // hide food that a head is about to swallow (server confirms a moment later)
+      for (const s of map.values()) {
+        const r = radiusOf(s.mass) + 14, hx = s.pts[0], hy = s.pts[1];
+        for (let j = foods.length - 1; j >= 0; j--) {
+          const f = foods[j], dx = f.x - hx, dy = f.y - hy;
+          if (dx * dx + dy * dy < r * r) { foods[j] = foods[foods.length - 1]; foods.pop(); }
+        }
+      }
+    } else if (type === 2) {
+      const n = dv.getUint16(1, true);
+      const arr = new Array(n);
+      let o = 3;
+      for (let i = 0; i < n; i++) {
+        const x = dv.getInt16(o, true), y = dv.getInt16(o + 2, true);
+        arr[i] = { x, y, v: dv.getUint8(o + 4), c: dv.getUint8(o + 5), ph: ((x * 13 + y * 7) & 1023) / 163 };
+        o += 6;
+      }
+      foods = arr;
+    }
+  }
+
+  // ---------- menu / death ----------
+  function play() {
+    if (!connected || playing || joinPending) return;
+    const n = nick.value.trim().slice(0, 16);
+    try { localStorage.setItem('rb_nick', n); localStorage.setItem('rb_color', color); } catch {}
+    joinPending = true;
+    send({ t: 'j', n, c: color });
+  }
+  playBtn.onclick = play;
+  nick.addEventListener('keydown', e => { if (e.key === 'Enter') play(); });
+
+  function showMenu() { if (!OBS) menu.classList.remove('hidden'); }
+
+  function onDeath(m) {
+    playing = false; myId = 0;
+    document.body.classList.remove('playing');
+    $('dScore').textContent = m.score;
+    $('dKills').textContent = m.kills;
+    const s = Math.round(m.ms / 1000);
+    $('dTime').textContent = s >= 60 ? Math.floor(s / 60) + 'm ' + (s % 60) + 's' : s + 's';
+    $('dBy').textContent = m.by ? 'Eaten by ' + m.by : 'You hit the wall!';
+    $('deathBox').hidden = false;
+    playBtn.textContent = 'PLAY AGAIN';
+    setTimeout(() => { if (!playing) { showMenu(); playBtn.focus(); } }, 900);
+  }
+
+  // ---------- HUD ----------
+  function renderLeaderboard() {
+    $('onlineCount').textContent = lb.online;
+    $('playingCount').textContent = lb.playing;
+    const list = $('lbList');
+    list.textContent = '';
+    lb.top.forEach(([id, name, score, bot], i) => {
+      const li = document.createElement('li');
+      if (id === myId) li.className = 'me';
+      else if (bot) li.className = 'bot';
+      const r = document.createElement('span'); r.className = 'r'; r.textContent = (i + 1) + '.';
+      const nm = document.createElement('span'); nm.className = 'n'; nm.textContent = name;
+      const sc = document.createElement('span'); sc.textContent = score;
+      li.append(r, nm, sc);
+      list.appendChild(li);
+    });
+    $('lbFoot').textContent = `${lb.playing} player${lb.playing === 1 ? '' : 's'} · ${lb.online} watching`;
+    if (playing && lb.rank) $('rank').textContent = `${lb.rank}/${lb.total}`;
+  }
+
+  const feedEl = $('feed');
+  function addFeed(m) {
+    const d = document.createElement('div');
+    if (m.a) {
+      const k = document.createElement('span'); k.className = 'k'; k.textContent = m.a;
+      const v = document.createElement('span'); v.className = 'v'; v.textContent = m.b;
+      d.append(k, ' ate ', v);
+    } else {
+      const v = document.createElement('span'); v.className = 'v'; v.textContent = m.b;
+      d.append(v, ' crashed into the wall');
+    }
+    feedEl.prepend(d);
+    while (feedEl.children.length > 5) feedEl.lastChild.remove();
+    setTimeout(() => { d.style.opacity = '0'; setTimeout(() => d.remove(), 700); }, 5000);
+  }
+
+  // ---------- input ----------
+  function steerFrom(e) { mouseA = Math.atan2(e.clientY - H / 2, e.clientX - W / 2); }
+  const touches = new Set();
+  cv.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || touches.has(e.pointerId)) steerFrom(e); });
+  cv.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse') { if (e.button === 0) boostMouse = true; steerFrom(e); }
+    else { touches.add(e.pointerId); if (touches.size >= 2) boostTouch = true; else steerFrom(e); }
+  });
+  const up = e => {
+    if (e.pointerType === 'mouse') boostMouse = false;
+    else { touches.delete(e.pointerId); if (touches.size < 2) boostTouch = false; }
+  };
+  addEventListener('pointerup', up);
+  addEventListener('pointercancel', up);
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  addEventListener('keydown', e => {
+    if (e.code === 'Space' && playing) { boostKey = true; e.preventDefault(); }
+    if (e.code === 'Enter' && !playing && !menu.classList.contains('hidden') && document.activeElement !== nick) play();
+  });
+  addEventListener('keyup', e => { if (e.code === 'Space') boostKey = false; });
+  addEventListener('blur', () => { boostKey = boostMouse = boostTouch = boostBtnOn = false; });
+  const bb = $('boostBtn');
+  bb.addEventListener('pointerdown', e => { e.preventDefault(); boostBtnOn = true; bb.classList.add('on'); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => bb.addEventListener(ev, () => { boostBtnOn = false; bb.classList.remove('on'); }));
+
+  setInterval(() => {
+    if (!playing) return;
+    const b = boostKey || boostMouse || boostTouch || boostBtnOn;
+    if (lastA === null || Math.abs(mouseA - lastA) > 0.012 || b !== lastB) {
+      send({ t: 'i', a: +mouseA.toFixed(3), b: b ? 1 : 0 });
+      lastA = mouseA; lastB = b;
+    }
+  }, 40);
+
+  // ---------- rendering ----------
+  function circle(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+
+  function interpolated(a) {
+    const out = [];
+    for (const s of curr.snakes.values()) {
+      const p = prev && prev.snakes.get(s.id);
+      let pts = s.pts;
+      if (p && a < 1) {
+        const q = new Float32Array(pts.length), pl = p.pts.length;
+        for (let i = 0; i < pts.length; i++) q[i] = i < pl ? p.pts[i] + (pts[i] - p.pts[i]) * a : pts[i];
+        pts = q;
+      }
+      out.push({ id: s.id, color: s.color, boost: s.boost, mass: s.mass, pts });
+    }
+    return out;
+  }
+
+  function drawSnake(s, now) {
+    const r = radiusOf(s.mass), pts = s.pts, n = pts.length / 2;
+    const [c0, c1] = PALETTE[s.color % PALETTE.length];
+    const hx = pts[0], hy = pts[1];
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    if (n === 1) ctx.lineTo(hx + 0.1, hy);
+    for (let i = 1; i < n; i++) ctx.lineTo(pts[i * 2], pts[i * 2 + 1]);
+
+    if (s.boost) {
+      ctx.globalAlpha = 0.25 + 0.1 * Math.sin(now / 60);
+      ctx.strokeStyle = c0; ctx.lineWidth = r * 2 + 22; ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = r * 2 + 4; ctx.stroke();
+    ctx.strokeStyle = c0; ctx.lineWidth = r * 2; ctx.stroke();
+    ctx.setLineDash([r * 0.75, r * 1.05]);
+    ctx.strokeStyle = c1; ctx.globalAlpha = 0.55; ctx.lineWidth = r * 1.55; ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.18; ctx.strokeStyle = '#fff'; ctx.lineWidth = r * 0.5; ctx.stroke(); // sheen
+    ctx.globalAlpha = 1;
+
+    // head
+    const ang = n > 1 ? Math.atan2(hy - pts[3], hx - pts[2]) : 0;
+    ctx.fillStyle = c0; circle(hx, hy, r * 1.08);
+    const look = s.id === myId && playing ? mouseA : ang;
+    for (const side of [-1, 1]) {
+      const ex = hx + Math.cos(ang) * r * 0.35 + Math.cos(ang + side * Math.PI / 2) * r * 0.5;
+      const ey = hy + Math.sin(ang) * r * 0.35 + Math.sin(ang + side * Math.PI / 2) * r * 0.5;
+      ctx.fillStyle = '#fff'; circle(ex, ey, r * 0.38);
+      ctx.fillStyle = s.boost ? '#ff2d55' : '#0a0d18';
+      circle(ex + Math.cos(look) * r * 0.15, ey + Math.sin(look) * r * 0.15, r * 0.21);
+    }
+
+    // name tag (constant on-screen size)
+    const name = names.get(s.id);
+    if (name) {
+      ctx.font = `700 ${13 / scale}px Inter,system-ui,sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3 / scale; ctx.strokeStyle = 'rgba(0,0,0,.75)';
+      const ty = hy + r * 1.08 + 16 / scale;
+      ctx.strokeText(name, hx, ty);
+      ctx.fillStyle = s.id === myId ? '#fff' : 'rgba(230,236,255,.85)';
+      ctx.fillText(name, hx, ty);
+    }
+  }
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.fillStyle = '#16060d';
+    ctx.fillRect(0, 0, W, H);
+    if (!curr) return;
+
+    const a = prev ? Math.min(1, Math.max(0, (now - curr.t) / interval)) : 1;
+    const list = interpolated(a);
+    const mine = list.find(s => s.id === myId && myId);
+
+    // camera
+    let tx, ty;
+    if (mine) { tx = mine.pts[0]; ty = mine.pts[1]; }
+    else { tx = prev ? prev.cx + (curr.cx - prev.cx) * a : curr.cx; ty = prev ? prev.cy + (curr.cy - prev.cy) * a : curr.cy; }
+    if (!cam.init || mine) { cam.x = tx; cam.y = ty; cam.init = true; }
+    else { cam.x += (tx - cam.x) * 0.1; cam.y += (ty - cam.y) * 0.1; }
+    const targetScale = Math.min(W, H) / 2 / curr.view;
+    scale += (targetScale - scale) * 0.05;
+
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(scale, scale);
+    ctx.translate(-cam.x, -cam.y);
+    const vw = W / 2 / scale, vh = H / 2 / scale;
+    const x0 = cam.x - vw, x1 = cam.x + vw, y0 = cam.y - vh, y1 = cam.y + vh;
+
+    // arena
+    ctx.beginPath(); ctx.arc(0, 0, worldR, 0, Math.PI * 2);
+    ctx.fillStyle = '#0a0f1f'; ctx.fill();
+    ctx.save(); ctx.clip();
+    const G = 64;
+    ctx.fillStyle = 'rgba(110,140,255,.10)';
+    const dot = 2.2;
+    for (let x = Math.floor(x0 / G) * G; x < x1; x += G) {
+      for (let y = Math.floor(y0 / G) * G; y < y1; y += G) {
+        const off = ((Math.round(y / G) & 1) ? G / 2 : 0);
+        ctx.fillRect(x + off - dot, y - dot, dot * 2, dot * 2);
+      }
+    }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(0, 0, worldR, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,45,85,.18)'; ctx.lineWidth = 60; ctx.stroke();
+    ctx.strokeStyle = '#ff2d55'; ctx.lineWidth = 10; ctx.stroke();
+
+    // food
+    ctx.globalCompositeOperation = 'lighter';
+    for (const f of foods) {
+      if (f.x < x0 - 30 || f.x > x1 + 30 || f.y < y0 - 30 || f.y > y1 + 30) continue;
+      const rr = (3 + f.v * 1.3) * (1 + 0.18 * Math.sin(now / 280 + f.ph));
+      ctx.fillStyle = PALETTE[f.c % PALETTE.length][0];
+      ctx.globalAlpha = 0.22; circle(f.x, f.y, rr * 2.3);
+      ctx.globalAlpha = 1; circle(f.x, f.y, rr);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+
+    // snakes: smaller first, yours on top
+    list.sort((p, q) => (p.id === myId) - (q.id === myId) || p.mass - q.mass);
+    for (const s of list) drawSnake(s, now);
+    ctx.restore();
+
+    // HUD numbers
+    if (mine) $('len').textContent = mine.mass;
+    drawMinimap(mine);
+  }
+
+  function drawMinimap(mine) {
+    if (!playing || !lb) return;
+    const S = mini.width, R = S / 2;
+    mctx.clearRect(0, 0, S, S);
+    mctx.fillStyle = 'rgba(8,12,24,.6)';
+    mctx.beginPath(); mctx.arc(R, R, R - 2, 0, Math.PI * 2); mctx.fill();
+    mctx.strokeStyle = 'rgba(255,45,85,.7)'; mctx.lineWidth = 4; mctx.stroke();
+    const k = (R - 8) / (worldR / 30);
+    mctx.fillStyle = 'rgba(160,180,255,.55)';
+    for (const [x, y, r] of lb.map) {
+      mctx.beginPath(); mctx.arc(R + x * k, R + y * k, Math.max(2.5, r / 6), 0, Math.PI * 2); mctx.fill();
+    }
+    if (mine) {
+      mctx.fillStyle = '#ff2d55';
+      mctx.shadowColor = '#ff2d55'; mctx.shadowBlur = 10;
+      mctx.beginPath(); mctx.arc(R + mine.pts[0] / 30 * k, R + mine.pts[1] / 30 * k, 6, 0, Math.PI * 2); mctx.fill();
+      mctx.shadowBlur = 0;
+    }
+  }
+
+  resize();
+  connect();
+  requestAnimationFrame(frame);
+  if (!OBS) nick.focus();
+})();
+</script>
+</body>
+</html>
